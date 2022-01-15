@@ -14,7 +14,9 @@
 
 namespace bustub {
 
-LRUReplacer::LRUReplacer(size_t num_pages) {}
+LRUReplacer::LRUReplacer(size_t num_pages) {
+  // TO DO(student)
+}
 
 LRUReplacer::~LRUReplacer() = default;
 

@@ -36,17 +36,26 @@ class LRUReplacer : public Replacer {
    * Destroys the LRUReplacer.
    */
   ~LRUReplacer() override;
-
+  //Remove the object that was accessed least recently compared to all the other elements being 
+  //tracked by the Replacer, store its contents in the output parameter and return True. 
+  //If the Replacer is empty return False.
   bool Victim(frame_id_t *frame_id) override;
 
+  //This method should be called after a page is pinned to a frame in the BufferPoolManager. 
+  //It should remove the frame containing the pinned page from the LRUReplacer.  
   void Pin(frame_id_t frame_id) override;
 
+  //This method should be called when the pin_count of a page becomes 0. 
+  //This method should add the frame containing the unpinned page to the LRUReplacer.
   void Unpin(frame_id_t frame_id) override;
 
+  //This method returns the number of frames that are currently in the LRUReplacer.
   size_t Size() override;
 
  private:
   // TODO(student): implement me!
+
+
 };
 
 }  // namespace bustub
