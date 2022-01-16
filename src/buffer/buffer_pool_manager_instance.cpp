@@ -81,7 +81,8 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
   if (!free_list_.empty())
   {
     //next page id in the bpi
-    *page_id = next_page_id_ + num_instances_;
+    *page_id = next_page_id_;
+    next_page_id_+= num_instances_;
 
     frame_id_t frame_id = free_list_.front();     //find a frame for the page
     free_list_.pop_front();
@@ -96,7 +97,9 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
     frame_id_t R;
     //find a frame from replacer
     if(replacer_->Victim(&R)){
-      *page_id = next_page_id_ + num_instances_;
+      *page_id = next_page_id_; 
+      next_page_id_ += num_instances_;
+      
       p = &pages_[R];
       if(p->IsDirty()){
         disk_manager_->WritePage(p->page_id_,p->data_);
