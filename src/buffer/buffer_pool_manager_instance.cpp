@@ -50,6 +50,8 @@ BufferPoolManagerInstance::~BufferPoolManagerInstance() {
 bool BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) {
   // Make sure you call DiskManager::WritePage!
   // 刷新进磁盘，数据不dirty了
+  ValidatePageId(page_id);
+  latch_.lock();
   if (page_table_.find(page_id) != page_table_.end()) {
     Page *p = &pages_[page_table_[page_id]];
     disk_manager_->WritePage(page_id, p->data_);
@@ -82,6 +84,7 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
     // next page id in the bpi
     *page_id = next_page_id_;
     next_page_id_ += num_instances_;
+    ValidatePageId(*page_id);
 
     frame_id_t frame_id = free_list_.front();  // find a frame for the page
     free_list_.pop_front();
@@ -128,6 +131,8 @@ Page *BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) {
   // 2.     If R is dirty, write it back to the disk.
   // 3.     Delete R from the page table and insert P.
   // 4.     Update P's metadata, read in the page content from disk, and then return a pointer to P.
+
+  ValidatePageId(page_id);
   Page *p = nullptr;
   latch_.lock();
   // if the page p in buffer pool,return it and pin it
@@ -185,6 +190,7 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   // 1.   If P does not exist, return true.
   // 2.   If P exists, but has a non-zero pin-count, return false. Someone is using the page.
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
+  ValidatePageId(page_id);
   latch_.lock();
   if (page_table_.find(page_id) == page_table_.end()) {
     latch_.unlock();
@@ -205,10 +211,11 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   p->page_id_ = INVALID_PAGE_ID;
   free_list_.push_back(frame_id);
   latch_.unlock();
-  return false;
+  return true;
 }
 
 bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
+  ValidatePageId(page_id);
   latch_.lock();
   // page not in buffer
   if (page_table_.find(page_id) == page_table_.end()) {

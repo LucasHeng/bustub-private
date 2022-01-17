@@ -92,5 +92,6 @@ class ParallelBufferPoolManager : public BufferPoolManager {
   std::vector<BufferPoolManager *> bpis_;
   size_t num_instances_;
   int start_index_;
+  size_t pool_size_;
 };
 }  // namespace bustub

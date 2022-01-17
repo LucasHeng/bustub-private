@@ -19,17 +19,22 @@ ParallelBufferPoolManager::ParallelBufferPoolManager(size_t num_instances, size_
     : num_instances_(num_instances) {
   // Allocate and create individual BufferPoolManagerInstances
   start_index_ = 0;
+  pool_size_ = pool_size * num_instances;
   for (int i = 0; i != static_cast<int>(num_instances_); i++) {
     bpis_.emplace_back(new BufferPoolManagerInstance(pool_size, num_instances, i, disk_manager, log_manager));
   }
 }
 
 // Update constructor to destruct all BufferPoolManagerInstances and deallocate any associated memory
-ParallelBufferPoolManager::~ParallelBufferPoolManager() = default;
+ParallelBufferPoolManager::~ParallelBufferPoolManager() {
+  for (int i = 0; i != static_cast<int>(num_instances_); i++) {
+    delete bpis_[i];
+  }
+}
 
 size_t ParallelBufferPoolManager::GetPoolSize() {
   // Get size of all BufferPoolManagerInstances
-  return bpis_.size();
+  return pool_size_;
 }
 
 BufferPoolManager *ParallelBufferPoolManager::GetBufferPoolManager(page_id_t page_id) {
