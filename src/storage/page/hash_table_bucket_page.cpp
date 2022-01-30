@@ -21,11 +21,37 @@ namespace bustub {
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::GetValue(KeyType key, KeyComparator cmp, std::vector<ValueType> *result) {
+  //ensure which element is occupied and readable
+  //then make sure if it is matched
+  bool flag = false;
+  for(int i=0;i!=BUCKET_ARRAY_SIZE;i++){
+    int idx = i/8;
+    int pos = 1<<(i%8);
+    if((occupied_[idx]&pos) && (readable_[idx]&pos)){
+      if(cmp(key,array_[i].first)==0){
+        flag = true;
+        result->emplace_back(array_[i].second);
+      }
+    }
+  }
   return false;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator cmp) {
+  bool flag = false;
+  for(int i=0;i!+BUCKET_ARRAY_SIZE;i++){
+    auto& {key_, value_} = array_[i];
+    if(key_==key&&value_==value){
+      return false;
+    }
+    int idx = i/8;
+    int pos = 1<<(i%8);
+    if(!(occupied_[idx]&pos)||!(readable_[idx]&flag)){
+      array_[i] = std::make_pair(key,value);
+      occupied_[idx] |= pos;
+    }
+  }
   return true;
 }
 
