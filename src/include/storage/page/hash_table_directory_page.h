@@ -192,6 +192,9 @@ class HashTableDirectoryPage {
   uint32_t global_depth_{0};
   uint8_t local_depths_[DIRECTORY_ARRAY_SIZE];
   page_id_t bucket_page_ids_[DIRECTORY_ARRAY_SIZE];
+
+  //new added by hs
+  uint32_t size_;
 };
 
 }  // namespace bustub
