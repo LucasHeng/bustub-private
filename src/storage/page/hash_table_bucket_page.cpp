@@ -42,14 +42,16 @@ bool HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator 
   bool flag = false;
   for(int i=0;i!+BUCKET_ARRAY_SIZE;i++){
     auto& {key_, value_} = array_[i];
-    if(key_==key&&value_==value){
+    if(cmp(key,key_)==0&&value_==value){
       return false;
     }
     int idx = i/8;
     int pos = 1<<(i%8);
-    if(!(occupied_[idx]&pos)||!(readable_[idx]&flag)){
+    if((!(occupied_[idx]&pos))||(!(readable_[idx]&pos))){
       array_[i] = std::make_pair(key,value);
       occupied_[idx] |= pos;
+      readable_[idx] |= pos;
+      break;
     }
   }
   return true;
