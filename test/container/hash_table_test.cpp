@@ -85,6 +85,7 @@ TEST(HashTableTest, SampleTest) {
 
   // delete some values
   for (int i = 0; i < 5; i++) {
+    LOG_INFO("xxx");
     EXPECT_TRUE(ht.Remove(nullptr, i, i));
     std::vector<int> res;
     ht.GetValue(nullptr, i, &res);
