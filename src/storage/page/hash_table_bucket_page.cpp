@@ -25,9 +25,6 @@ bool HASH_TABLE_BUCKET_TYPE::GetValue(KeyType key, KeyComparator cmp, std::vecto
   // then make sure if it is matched
   bool flag = false;
   for (uint32_t bucket_idx = 0; bucket_idx < BUCKET_ARRAY_SIZE; bucket_idx++) {
-    if (!IsOccupied(bucket_idx)) {
-      break;
-    }
     if (IsReadable(bucket_idx)) {
       if (cmp(key, array_[bucket_idx].first) == 0) {
         flag = true;

@@ -57,7 +57,8 @@ void HashTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id_t buck
   bucket_page_ids_[bucket_idx] = bucket_page_id;
 }
 uint32_t HashTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) {
-  return static_cast<uint32_t>(1 << (local_depths_[bucket_idx] - 1)) ^ bucket_idx;
+  uint32_t local_mask = GetLocalHighBit(bucket_idx);
+  return static_cast<uint32_t>((1 << (local_depths_[bucket_idx] - 1)) ^ bucket_idx) & local_mask;
 }
 uint32_t HashTableDirectoryPage::Size() {
   // remain in doubt

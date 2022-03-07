@@ -218,14 +218,25 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   HASH_TABLE_BUCKET_TYPE *hash_table_bucket_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(page->GetData());
   bool flag = hash_table_bucket_page->Remove(key, value, comparator_);
   page->WUnlatch();
+  bool is_merge = false;
+  uint32_t bucket_page_index = KeyToDirectoryIndex(key, dir_page);
+  uint32_t local_depth = dir_page->GetLocalDepth(bucket_page_index);
+  uint32_t split_image_index = dir_page->GetSplitImageIndex(KeyToDirectoryIndex(key, dir_page));
+  uint32_t split_local_depth = dir_page->GetLocalDepth(split_image_index);
+  if (hash_table_bucket_page->IsEmpty() && local_depth > 0 && local_depth == split_local_depth) {
+    is_merge = true;
+  }
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
   assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
-  if (hash_table_bucket_page->IsEmpty()) {
-    // page->WUnlatch();
-    // table_latch_.RUnlock();
+  // if (hash_table_bucket_page->IsEmpty()&&hash_table_bucket_page->GetLocalDepth()>0&&) {
+  //   page->WUnlatch();
+  //   table_latch_.RUnlock();
+  //  Merge(transaction, key, value);
+  // }
+  table_latch_.RUnlock();
+  if (is_merge) {
     Merge(transaction, key, value);
   }
-  table_latch_.RUnlock();
   LOG_INFO("Here is after Remove!!!");
   VerifyIntegrity();
   return flag;
@@ -244,26 +255,46 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
   HashTableDirectoryPage *dir_page = FetchDirectoryPage();
   // second,find the page id
   page_id_t bucket_page_id = KeyToPageId(key, dir_page);
-  // third,find the bucket_page
-  HASH_TABLE_BUCKET_TYPE *hash_table_bucket_page = FetchBucketPage(bucket_page_id);
-
   uint32_t bucket_index = KeyToDirectoryIndex(key, dir_page);
-  if (hash_table_bucket_page->IsEmpty() && dir_page->GetLocalDepth(bucket_index)) {
-    // find the directory_index
-    uint32_t split_image_index = dir_page->GetSplitImageIndex(bucket_index);
-    if (dir_page->GetLocalDepth(split_image_index) == dir_page->GetLocalDepth(bucket_index)) {
-      page_id_t page_id = dir_page->GetBucketPageId(split_image_index);
-      // decresing local depth
-      dir_page->DecrLocalDepth(bucket_index);
-      dir_page->DecrLocalDepth(split_image_index);
-      // set the bucket
-      dir_page->SetBucketPageId(bucket_index, page_id);
-      buffer_pool_manager_->DeletePage(bucket_page_id);
+  page_id_t split_page_index = dir_page->GetSplitImageIndex(bucket_index);
+  page_id_t split_page_id = dir_page->GetBucketPageId(split_page_index);
+  if (split_page_id == bucket_page_id) {
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
+    table_latch_.WUnlock();
+    return;
+  }
+  // third,find the bucket_page
+  HASH_TABLE_BUCKET_TYPE *split_table_bucket_page = FetchBucketPage(split_page_id);
+  // HASH_TABLE_BUCKET_TYPE *hash_table_bucket_page = FetchBucketPage(bucket_page_id);
+
+  uint32_t new_local_depth = dir_page->GetLocalDepth(bucket_index) - 1;
+  uint32_t local_mask = dir_page->GetLocalHighBit(bucket_index) % (1 << new_local_depth);
+  uint32_t global_depth = dir_page->GetGlobalDepth();
+  for (uint32_t i = 0; i < static_cast<uint32_t>(1 << (global_depth - new_local_depth)); i++) {
+    uint32_t new_page_index = (1 << new_local_depth) * i + local_mask;
+    if (dir_page->GetBucketPageId(new_page_index) == bucket_page_id) {
+      dir_page->SetBucketPageId(new_page_index, split_page_id);
     }
+    dir_page->SetLocalDepth(new_page_index, new_local_depth);
+  }
+  buffer_pool_manager_->DeletePage(bucket_page_id, nullptr);
+  if (dir_page->CanShrink()) {
+    dir_page->DecrGlobalDepth();
+  }
+  bool is_merge = false;
+  uint32_t bucket_page_index = KeyToDirectoryIndex(key, dir_page);
+  uint32_t local_depth = dir_page->GetLocalDepth(bucket_page_index);
+  uint32_t split_image_index = dir_page->GetSplitImageIndex(KeyToDirectoryIndex(key, dir_page));
+  uint32_t split_local_depth = dir_page->GetLocalDepth(split_image_index);
+  if (split_table_bucket_page->IsEmpty() && local_depth > 0 && local_depth == split_local_depth) {
+    is_merge = true;
   }
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
-  assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
+  // assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
   table_latch_.WUnlock();
+  if (is_merge) {
+    Merge(transaction, key, value);
+  }
   LOG_DEBUG("Here is after Merge!!!");
   VerifyIntegrity();
 }
