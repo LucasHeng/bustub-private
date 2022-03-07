@@ -91,7 +91,8 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
     page_table_[*page_id] = frame_id;
     p = &pages_[frame_id];
     p->ResetMemory();
-    disk_manager_->ReadPage(*page_id, p->data_);
+    // disk_manager_->ReadPage(*page_id, p->data_);
+    disk_manager_->WritePage(*page_id, p->data_);
     p->page_id_ = *page_id;
     p->is_dirty_ = false;
     p->pin_count_ = 1;
@@ -112,7 +113,8 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
       if (p->page_id_ != INVALID_PAGE_ID) {
         page_table_.erase(p->page_id_);
       }
-      disk_manager_->ReadPage(*page_id, p->data_);
+      // disk_manager_->ReadPage(*page_id, p->data_);
+      disk_manager_->WritePage(*page_id, p->data_);
       p->page_id_ = *page_id;
       p->is_dirty_ = false;
       p->pin_count_ = 1;
@@ -215,6 +217,7 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
 }
 
 bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
+  // this page_id should be in this bfpi
   ValidatePageId(page_id);
   latch_.lock();
   // page not in buffer
