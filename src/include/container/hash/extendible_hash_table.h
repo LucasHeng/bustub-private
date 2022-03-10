@@ -88,10 +88,7 @@ class ExtendibleHashTable {
 
   void PrintDir();
 
-  
- 
   void RemoveAllItem(Transaction *transaction, uint32_t bucket_idx);
-
 
  private:
   /**

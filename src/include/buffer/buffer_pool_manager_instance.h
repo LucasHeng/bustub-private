@@ -60,9 +60,8 @@ class BufferPoolManagerInstance : public BufferPoolManager {
 
   //
   size_t GetOccupiedPageNum();
-  
-  void PrintExistPageId();
 
+  void PrintExistPageId();
 
  protected:
   /**

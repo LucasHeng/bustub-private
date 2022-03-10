@@ -60,7 +60,8 @@ uint32_t HashTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) {
   if (local_depths_[bucket_idx] == 0) {
     return 0;
   }
-  return static_cast<uint32_t>((1 << (local_depths_[bucket_idx] - 1)) ^ bucket_idx) & GetLocalHighBit(bucket_idx);
+  uint32_t localmask = (1 << local_depths_[bucket_idx]) - 1;
+  return static_cast<uint32_t>((1 << (local_depths_[bucket_idx] - 1)) ^ bucket_idx) & localmask;
 }
 uint32_t HashTableDirectoryPage::Size() {
   // remain in doubt
@@ -148,7 +149,7 @@ void HashTableDirectoryPage::PrintDirectory() {
   LOG_DEBUG("======== DIRECTORY (global_depth_: %u) ========", global_depth_);
   LOG_DEBUG("| bucket_idx | page_id | local_depth |");
   for (uint32_t idx = 0; idx < static_cast<uint32_t>(0x1 << global_depth_); idx++) {
-  // for (uint32_t idx = 0; idx < 10; idx++) {
+    // for (uint32_t idx = 0; idx < 10; idx++) {
     LOG_DEBUG("|      %u     |     %u     |     %u     |", idx, bucket_page_ids_[idx], local_depths_[idx]);
   }
   LOG_DEBUG("================ END DIRECTORY ================");

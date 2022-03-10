@@ -91,6 +91,7 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
     frame_id_t frame_id = free_list_.front();  // find a frame for the page
     free_list_.pop_front();
     page_table_[*page_id] = frame_id;
+    replacer_->Pin(frame_id);
     p = &pages_[frame_id];
     p->ResetMemory();
     // disk_manager_->ReadPage(*page_id, p->data_);
@@ -202,14 +203,15 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
     DeallocatePage(page_id);
     return true;
   }
-  Page *p = &pages_[page_table_[page_id]];
+  frame_id_t frame_id = page_table_[page_id];
+  Page *p = &pages_[frame_id];
   if (p->GetPinCount() != 0) {
     latch_.unlock();
     return false;
   }
-  frame_id_t frame_id = page_table_[page_id];
 
   DeallocatePage(page_id);
+  replacer_->Unpin(frame_id);
   page_table_.erase(page_id);
   p->ResetMemory();
   p->is_dirty_ = false;
@@ -228,13 +230,13 @@ bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
   if (page_table_.find(page_id) == page_table_.end()) {
     latch_.unlock();
     return false;
-  } 
+  }
   // page in buffer
   frame_id_t r = page_table_[page_id];
   Page *p = &pages_[r];
-  if (p->pin_count_ > 1) {
-    printf("pin_count:%d\n",p->pin_count_);
-  }
+  // if (p->pin_count_ > 1) {
+  //   printf("pin_count:%d\n",p->pin_count_);
+  // }
   if (is_dirty) {  // page is dirty
     p->is_dirty_ = is_dirty;
   }
@@ -261,7 +263,10 @@ void BufferPoolManagerInstance::ValidatePageId(const page_id_t page_id) const {
   assert(page_id % num_instances_ == instance_index_);  // allocated pages mod back to this BPI
 }
 
-size_t BufferPoolManagerInstance::GetOccupiedPageNum() { return page_table_.size() - replacer_->Size(); }
+size_t BufferPoolManagerInstance::GetOccupiedPageNum() { 
+  LOG_DEBUG("1:%ld\t2:%ld\n",page_table_.size(),replacer_->Size());
+  return page_table_.size() - replacer_->Size(); 
+}
 
 void BufferPoolManagerInstance::PrintExistPageId() {
   for (auto item : page_table_) {

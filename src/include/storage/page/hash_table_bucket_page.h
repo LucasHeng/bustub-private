@@ -138,7 +138,12 @@ class HashTableBucketPage {
    */
   void PrintBucket();
 
-  std::vector<MappingType> GetAllItem(); 
+  /**
+   * @brief Get the All Item object
+   *
+   * @return std::vector<MappingType>
+   */
+  std::vector<MappingType> GetAllItem();
 
  private:
   // For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h

@@ -148,7 +148,6 @@ bool HASH_TABLE_BUCKET_TYPE::IsEmpty() {
   return true;
 }
 
-
 template <typename KeyType, typename ValueType, typename KeyComparator>
 std::vector<MappingType> HASH_TABLE_BUCKET_TYPE::GetAllItem() {
   uint32_t bucket_size = BUCKET_ARRAY_SIZE;

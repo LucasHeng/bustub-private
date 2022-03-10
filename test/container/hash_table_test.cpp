@@ -130,15 +130,18 @@ TEST(HashTableTest, MySplitShrinkTest1) {
   for (int i = 0; i < 496; i++) {
     ht.Insert(nullptr, i, i);
   }
-  ht.PrintDir();                            // 输出目录信息
-  ht.Insert(nullptr, 496, 496);             // 桶分裂
+  ht.PrintDir();  // 输出目录信息
+  ht.Insert(nullptr, 496, 496);
+  printf("1\n");                            // 桶分裂
   EXPECT_EQ(bpm->GetOccupiedPageNum(), 0);  // 无论何时，被占用的页都应该为0
   EXPECT_EQ(ht.GetGlobalDepth(), 1);
   ht.PrintDir();
   ht.RemoveAllItem(nullptr, 1);  // 删除索引1对应的桶的所有项
+  printf("2\n");
   EXPECT_EQ(bpm->GetOccupiedPageNum(), 0);
   ht.PrintDir();
   ht.RemoveAllItem(nullptr, 0);  // 删除索引0对应的桶的所有项
+  printf("3\n");
   EXPECT_EQ(bpm->GetOccupiedPageNum(), 0);
   ht.PrintDir();
 
@@ -163,14 +166,18 @@ TEST(HashTableTest, MySplitShrinkTest2) {
   }
   ht.PrintDir();
   ht.RemoveAllItem(nullptr, 0);
+  printf("1\n");
   EXPECT_EQ(bpm->GetOccupiedPageNum(), 0);  // 删除索引0对应的桶的所有项
   ht.PrintDir();
   ht.RemoveAllItem(nullptr, 0);
+  printf("2\n");
   EXPECT_EQ(bpm->GetOccupiedPageNum(), 0);  // 再次删除索引0对应的桶的所有项
   bpm->PrintExistPageId();                  // 输出缓冲池中页的状态
   ht.PrintDir();
   ht.RemoveAllItem(nullptr, 1);  // 删除索引1对应的桶的所有项，应该发生递归合并
+  printf("3\n");
   EXPECT_EQ(ht.GetGlobalDepth(), 0);
+  printf("4\n");
   EXPECT_EQ(bpm->GetOccupiedPageNum(), 0);
   ht.PrintDir();
 
@@ -180,8 +187,7 @@ TEST(HashTableTest, MySplitShrinkTest2) {
   delete bpm;
 }
 
-
-TEST(HashTableTest, DISABLE_SampleTest2) {
+TEST(HashTableTest, SampleTest2) {
   auto *disk_manager = new DiskManager("test.db");
   auto *bpm = new BufferPoolManagerInstance(3, disk_manager);
   ExtendibleHashTable<int, int, IntComparator> ht("blah", bpm, IntComparator(), HashFunction<int>());
