@@ -14,6 +14,8 @@
 
 #include "common/macros.h"
 
+#include "common/logger.h"
+
 namespace bustub {
 
 BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManager *disk_manager,
@@ -92,7 +94,7 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
     p = &pages_[frame_id];
     p->ResetMemory();
     // disk_manager_->ReadPage(*page_id, p->data_);
-    disk_manager_->WritePage(*page_id, p->data_);
+
     p->page_id_ = *page_id;
     p->is_dirty_ = false;
     p->pin_count_ = 1;
@@ -122,6 +124,7 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
     }
   }
   latch_.unlock();
+  // LOG_DEBUG("HERE:%d\n",*page_id);
   return p;
 }
 
@@ -205,6 +208,7 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
     return false;
   }
   frame_id_t frame_id = page_table_[page_id];
+
   DeallocatePage(page_id);
   page_table_.erase(page_id);
   p->ResetMemory();
@@ -224,11 +228,13 @@ bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
   if (page_table_.find(page_id) == page_table_.end()) {
     latch_.unlock();
     return false;
-  }
-
+  } 
   // page in buffer
   frame_id_t r = page_table_[page_id];
   Page *p = &pages_[r];
+  if (p->pin_count_ > 1) {
+    printf("pin_count:%d\n",p->pin_count_);
+  }
   if (is_dirty) {  // page is dirty
     p->is_dirty_ = is_dirty;
   }
@@ -253,6 +259,14 @@ page_id_t BufferPoolManagerInstance::AllocatePage() {
 
 void BufferPoolManagerInstance::ValidatePageId(const page_id_t page_id) const {
   assert(page_id % num_instances_ == instance_index_);  // allocated pages mod back to this BPI
+}
+
+size_t BufferPoolManagerInstance::GetOccupiedPageNum() { return page_table_.size() - replacer_->Size(); }
+
+void BufferPoolManagerInstance::PrintExistPageId() {
+  for (auto item : page_table_) {
+    printf("page id is:%d pin count is %d\n", item.first, pages_[item.second].pin_count_);
+  }
 }
 
 }  // namespace bustub

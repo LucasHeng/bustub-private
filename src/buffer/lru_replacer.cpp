@@ -28,6 +28,7 @@ LRUReplacer::~LRUReplacer() = default;
 
 bool LRUReplacer::Victim(frame_id_t *frame_id) {
   lru_mutex_.lock();
+  *frame_id = INVALID_PAGE_ID;
   if (!lru_list_.empty()) {
     *frame_id = lru_list_.back();
     lru_list_.pop_back();

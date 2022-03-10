@@ -38,24 +38,16 @@ bool HASH_TABLE_BUCKET_TYPE::GetValue(KeyType key, KeyComparator cmp, std::vecto
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator cmp) {
   bool flag = false;
-  for (uint32_t bucket_idx = 0; bucket_idx != BUCKET_ARRAY_SIZE; bucket_idx++) {
+  for (uint32_t bucket_idx = 0; bucket_idx < BUCKET_ARRAY_SIZE; bucket_idx++) {
     uint32_t idx = bucket_idx / 8;
     char pos = static_cast<char>(1 << (bucket_idx % 8));
-    if (IsOccupied(bucket_idx)) {
-      if (IsReadable(bucket_idx)) {
-        auto &[key_, value_] = array_[bucket_idx];
-        if (cmp(key_, key) == 0 && value_ == value) {
-          return false;
-        }
-      } else {
-        array_[bucket_idx] = std::make_pair(key, value);
-        occupied_[idx] |= pos;
-        readable_[idx] |= pos;
-        flag = true;
-        break;
+    if (IsReadable(bucket_idx)) {
+      auto &[key_, value_] = array_[bucket_idx];
+      if (cmp(key_, key) == 0 && value_ == value) {
+        return false;
       }
     } else {
-      array_[bucket_idx] = std::make_pair(key, value);
+      array_[bucket_idx] = static_cast<MappingType>(std::make_pair(key, value));
       occupied_[idx] |= pos;
       readable_[idx] |= pos;
       flag = true;
@@ -73,9 +65,7 @@ bool HASH_TABLE_BUCKET_TYPE::Remove(KeyType key, ValueType value, KeyComparator 
       if (!IsReadable(bucket_idx)) {
         return false;
       }
-      int idx = static_cast<int>(bucket_idx / 8);
-      char pos = static_cast<char>(1 << (bucket_idx % 8));
-      readable_[idx] &= (~(pos));
+      RemoveAt(bucket_idx);
       return true;
     }
   }
@@ -84,21 +74,19 @@ bool HASH_TABLE_BUCKET_TYPE::Remove(KeyType key, ValueType value, KeyComparator 
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 KeyType HASH_TABLE_BUCKET_TYPE::KeyAt(uint32_t bucket_idx) const {
-  auto &key = array_[bucket_idx].first;
-  return key;
+  return array_[bucket_idx].first;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 ValueType HASH_TABLE_BUCKET_TYPE::ValueAt(uint32_t bucket_idx) const {
-  auto &value = array_[bucket_idx].second;
-  return value;
+  return array_[bucket_idx].second;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 void HASH_TABLE_BUCKET_TYPE::RemoveAt(uint32_t bucket_idx) {
   int idx = static_cast<int>(bucket_idx / 8);
-  char pos = static_cast<char>(1 << (bucket_idx % 8));
-  readable_[idx] |= (~(pos));
+  char pos = static_cast<char>(0x1 << (bucket_idx & 0x7));
+  readable_[idx] &= (~(pos));
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
@@ -131,14 +119,12 @@ void HASH_TABLE_BUCKET_TYPE::SetReadable(uint32_t bucket_idx) {
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::IsFull() {
-  uint32_t size = 0;
   for (size_t bucket_idx = 0; bucket_idx < BUCKET_ARRAY_SIZE; bucket_idx++) {
     if (!IsReadable(bucket_idx)) {
-      break;
+      return false;
     }
-    size++;
   }
-  return size == BUCKET_ARRAY_SIZE;
+  return true;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
@@ -155,11 +141,25 @@ uint32_t HASH_TABLE_BUCKET_TYPE::NumReadable() {
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::IsEmpty() {
   for (size_t bucket_idx = 0; bucket_idx < BUCKET_ARRAY_SIZE; bucket_idx++) {
-    if (IsOccupied(bucket_idx)) {
+    if (IsReadable(bucket_idx)) {
       return false;
     }
   }
   return true;
+}
+
+
+template <typename KeyType, typename ValueType, typename KeyComparator>
+std::vector<MappingType> HASH_TABLE_BUCKET_TYPE::GetAllItem() {
+  uint32_t bucket_size = BUCKET_ARRAY_SIZE;
+  std::vector<MappingType> items;
+  items.reserve(bucket_size);
+  for (uint32_t i = 0; i < bucket_size; i++) {
+    if (IsReadable(i)) {
+      items.emplace_back(array_[i]);
+    }
+  }
+  return items;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
