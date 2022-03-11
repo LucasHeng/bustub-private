@@ -286,7 +286,7 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
   }
   // dir_page->VerifyIntegrity();
   assert(buffer_pool_manager_->DeletePage(bucket_page_id, nullptr));
-  if (dir_page->CanShrink()) {
+  while (dir_page->CanShrink()) {
     dir_page->DecrGlobalDepth();
   }
   // assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
