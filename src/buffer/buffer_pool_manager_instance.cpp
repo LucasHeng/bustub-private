@@ -211,7 +211,7 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   }
 
   DeallocatePage(page_id);
-  replacer_->Unpin(frame_id);
+  replacer_->Pin(frame_id);
   page_table_.erase(page_id);
   p->ResetMemory();
   p->is_dirty_ = false;
@@ -263,9 +263,9 @@ void BufferPoolManagerInstance::ValidatePageId(const page_id_t page_id) const {
   assert(page_id % num_instances_ == instance_index_);  // allocated pages mod back to this BPI
 }
 
-size_t BufferPoolManagerInstance::GetOccupiedPageNum() { 
-  LOG_DEBUG("1:%ld\t2:%ld\n",page_table_.size(),replacer_->Size());
-  return page_table_.size() - replacer_->Size(); 
+size_t BufferPoolManagerInstance::GetOccupiedPageNum() {
+  LOG_DEBUG("1:%ld\t2:%ld\n", page_table_.size(), replacer_->Size());
+  return page_table_.size() - replacer_->Size();
 }
 
 void BufferPoolManagerInstance::PrintExistPageId() {

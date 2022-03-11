@@ -85,8 +85,8 @@ HASH_TABLE_BUCKET_TYPE *HASH_TABLE_TYPE::FetchBucketPage(page_id_t bucket_page_i
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std::vector<ValueType> *result) {
   // first,find the directorypage
-  HashTableDirectoryPage *dir_page = FetchDirectoryPage();
   table_latch_.RLock();
+  HashTableDirectoryPage *dir_page = FetchDirectoryPage();
   // second,find the page id
   page_id_t bucket_page_id = KeyToPageId(key, dir_page);
   // third,find the bucket_page
@@ -94,10 +94,10 @@ bool HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std
   page_bucket->RLatch();
   HASH_TABLE_BUCKET_TYPE *hash_table_bucket_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(page_bucket->GetData());
   bool flag = hash_table_bucket_page->GetValue(key, comparator_, result);
-  page_bucket->RUnlatch();
-  table_latch_.RUnlock();
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
+  page_bucket->RUnlatch();
   assert(buffer_pool_manager_->UnpinPage(bucket_page_id, false, nullptr));
+  table_latch_.RUnlock();
   return flag;
 }
 
@@ -109,33 +109,30 @@ bool HASH_TABLE_TYPE::Insert(Transaction *transaction, const KeyType &key, const
   // LOG_DEBUG("Here is before Insert!!!");
   // VerifyIntegrity();
   // first,find the directorypage
+  table_latch_.WLock();
   HashTableDirectoryPage *dir_page = FetchDirectoryPage();
-  table_latch_.RLock();
   // second,find the page id
   page_id_t bucket_page_id = KeyToPageId(key, dir_page);
   // third,find the bucket_page
   Page *page = buffer_pool_manager_->FetchPage(bucket_page_id);
-  page->WLatch();
   HASH_TABLE_BUCKET_TYPE *hash_table_bucket_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(page->GetData());
 
   bool flag = false;
   // if is full?
   if (hash_table_bucket_page->IsFull()) {
-    table_latch_.RUnlock();
     assert(buffer_pool_manager_->UnpinPage(bucket_page_id, false, nullptr));
     assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
     flag = SplitInsert(nullptr, key, value);
-  } else {
-    flag = hash_table_bucket_page->Insert(key, value, comparator_);
-    page->WUnlatch();
-    table_latch_.RUnlock();
-    if (flag) {
-      assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
-    } else {
-      assert(buffer_pool_manager_->UnpinPage(bucket_page_id, false, nullptr));
-    }
-    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
+    return flag;
   }
+  flag = hash_table_bucket_page->Insert(key, value, comparator_);
+  if (flag) {
+    assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
+  } else {
+    assert(buffer_pool_manager_->UnpinPage(bucket_page_id, false, nullptr));
+  }
+  assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
+  table_latch_.WUnlock();
   // LOG_DEBUG("Here is after Insert!!!");
   // VerifyIntegrity();
   return flag;
@@ -145,7 +142,6 @@ template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, const ValueType &value) {
   // LOG_DEBUG("Here is before SplitInsert!!!");
   HashTableDirectoryPage *dir_page = FetchDirectoryPage();
-  table_latch_.WLock();
   page_id_t bucket_page_id = KeyToPageId(key, dir_page);
   Page *page = buffer_pool_manager_->FetchPage(bucket_page_id);
   uint32_t directory_index = KeyToDirectoryIndex(key, dir_page);
@@ -158,14 +154,15 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
     if ((1 << (dir_page->GetGlobalDepth() + 1)) <= DIRECTORY_ARRAY_SIZE) {
       dir_page->IncrGlobalDepth();
     } else {
-      table_latch_.WUnlock();
       assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
       assert(buffer_pool_manager_->UnpinPage(bucket_page_id, false, nullptr));
+      table_latch_.WUnlock();
       return false;
     }
   }
   page_id_t new_page_id = INVALID_PAGE_ID;
   Page *new_page = buffer_pool_manager_->NewPage(&new_page_id, nullptr);
+  assert(new_page != nullptr);
   uint32_t diff = 0x1 << dir_page->GetLocalDepth(directory_index);
   HASH_TABLE_BUCKET_TYPE *new_bucket_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(new_page->GetData());
   uint32_t current_size = dir_page->Size();
@@ -193,11 +190,10 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
       }
     }
   }
-  page->WUnlatch();
-  table_latch_.WUnlock();
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
   assert(buffer_pool_manager_->UnpinPage(new_page_id, true, nullptr));
   assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
+  table_latch_.WUnlock();
   // if is full?
   // if (bucket_table_page->IsFull()) {
   //   flag = SplitInsert(nullptr, key, value);
@@ -217,17 +213,16 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   // LOG_TRACE("Here is before Remove!!!");
   // VerifyIntegrity();
   // first,find the directorypage
+  table_latch_.WLock();
   HashTableDirectoryPage *dir_page = FetchDirectoryPage();
-  table_latch_.RLock();
   // second,find the page id
   page_id_t bucket_page_id = KeyToPageId(key, dir_page);
   // third,find the bucket_page
   Page *page = buffer_pool_manager_->FetchPage(bucket_page_id);
-  page->WLatch();
   HASH_TABLE_BUCKET_TYPE *hash_table_bucket_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(page->GetData());
   bool flag = hash_table_bucket_page->Remove(key, value, comparator_);
   bool is_merge = hash_table_bucket_page->IsEmpty();
-  
+
   // bool is_merge = false;
   // uint32_t bucket_page_index = KeyToDirectoryIndex(key, dir_page);
   // uint32_t local_depth = dir_page->GetLocalDepth(bucket_page_index);
@@ -241,7 +236,6 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   //   table_latch_.RUnlock();
   //  Merge(transaction, key, value);
   // }
-  table_latch_.RUnlock();
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
   if (flag) {
     assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
@@ -250,10 +244,8 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   }
   if (flag && is_merge) {
     Merge(transaction, key, value);
-    return flag;
   }
-  
-  page->WUnlatch();
+  table_latch_.WUnlock();
   // LOG_DEBUG("Here is after Remove!!!");
   // VerifyIntegrity();
   return flag;
@@ -269,21 +261,16 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
   // VerifyIntegrity();
   // first,find the directorypage
   HashTableDirectoryPage *dir_page = FetchDirectoryPage();
-  table_latch_.WLock();
   // second,find the page id
   page_id_t bucket_page_id = KeyToPageId(key, dir_page);
   uint32_t bucket_index = KeyToDirectoryIndex(key, dir_page);
   uint32_t local_depth = dir_page->GetLocalDepth(bucket_index);
-  Page* page = buffer_pool_manager_->FetchPage(bucket_page_id);
-  assert(buffer_pool_manager_->UnpinPage(bucket_page_id, false, nullptr));
-  page->WUnlatch();
   //
   uint32_t split_page_index = dir_page->GetSplitImageIndex(bucket_index);
   page_id_t split_page_id = dir_page->GetBucketPageId(split_page_index);
   uint32_t split_depth = dir_page->GetLocalDepth(split_page_index);
   // LOG_DEBUG("1:%d\t2:%d\n",bucket_index,split_page_index);
   if (split_page_id == bucket_page_id || local_depth <= 0 || local_depth != split_depth) {
-    table_latch_.WUnlock();
     assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
     return;
   }
@@ -303,26 +290,26 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
     dir_page->DecrGlobalDepth();
   }
   // assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
+  // table_latch_.WUnlock();
   // assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
-  // uint32_t new_split_index = dir_page->GetSplitImageIndex(split_page_index);
-  // page_id_t new_split_id = dir_page->GetBucketPageId(new_split_index);
-  // Page* new_page = buffer_pool_manager_->FetchPage(new_split_id);
-  // new_page->WLatch();
-  // HASH_TABLE_BUCKET_TYPE *new_split_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(new_page->GetData());
-  table_latch_.WUnlock();
+  uint32_t new_split_index = dir_page->GetSplitImageIndex(split_page_index);
+  page_id_t new_split_id = dir_page->GetBucketPageId(new_split_index);
+  Page *new_page = buffer_pool_manager_->FetchPage(new_split_id);
+  HASH_TABLE_BUCKET_TYPE *new_split_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(new_page->GetData());
   // assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
-  // if (new_split_id == split_page_id) {
-  //   assert(buffer_pool_manager_->UnpinPage(new_split_id, false, nullptr));
-  //   new_page->WUnlatch();
-  //   return;
-  // }
-  // if (new_split_page->IsEmpty()) {
-  //   assert(buffer_pool_manager_->UnpinPage(new_split_id, false, nullptr));
-  //   Merge(transaction, new_split_page->KeyAt(0), new_split_page->ValueAt(0));
-  //   return;
-  // }
-  // assert(buffer_pool_manager_->UnpinPage(new_split_id, false, nullptr));
-
+  if (new_split_id == split_page_id) {
+    assert(buffer_pool_manager_->UnpinPage(new_split_id, false, nullptr));
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
+    return;
+  }
+  if (new_split_page->IsEmpty()) {
+    assert(buffer_pool_manager_->UnpinPage(new_split_id, false, nullptr));
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
+    Merge(transaction, new_split_page->KeyAt(0), new_split_page->ValueAt(0));
+    return;
+  }
+  assert(buffer_pool_manager_->UnpinPage(new_split_id, false, nullptr));
+  assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
   // assert(buffer_pool_manager_->UnpinPage(split_page_id, true, nullptr));
   // LOG_DEBUG("Here is after Merge!!!");
   // VerifyIntegrity();
