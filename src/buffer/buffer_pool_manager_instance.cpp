@@ -213,6 +213,9 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   DeallocatePage(page_id);
   replacer_->Pin(frame_id);
   page_table_.erase(page_id);
+  if (p->IsDirty()) {
+    disk_manager_->WritePage(p->GetPageId(), p->GetData());
+  }
   p->ResetMemory();
   p->is_dirty_ = false;
   p->pin_count_ = 0;
