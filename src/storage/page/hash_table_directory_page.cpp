@@ -34,8 +34,10 @@ uint32_t HashTableDirectoryPage::GetGlobalDepthMask() {
 
 void HashTableDirectoryPage::IncrGlobalDepth() {
   //
-  for (uint32_t i = 0; i < Size(); i++) {
-    uint32_t spilt_index = static_cast<uint32_t>(1 << global_depth_) + i;
+  assert((1 << global_depth_) <= DIRECTORY_ARRAY_SIZE);
+  uint32_t size = Size();
+  for (uint32_t i = 0; i < size; i++) {
+    uint32_t spilt_index = size + i;
     local_depths_[spilt_index] = local_depths_[i];
     bucket_page_ids_[spilt_index] = bucket_page_ids_[i];
   }
@@ -60,8 +62,8 @@ uint32_t HashTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) {
   if (local_depths_[bucket_idx] == 0) {
     return 0;
   }
-  uint32_t localmask = (1 << local_depths_[bucket_idx]) - 1;
-  return static_cast<uint32_t>((1 << (local_depths_[bucket_idx] - 1)) ^ bucket_idx) & localmask;
+  // uint32_t localmask = (1 << local_depths_[bucket_idx]) - 1;
+  return static_cast<uint32_t>((1 << (local_depths_[bucket_idx] - 1)) ^ bucket_idx);
 }
 uint32_t HashTableDirectoryPage::Size() {
   // remain in doubt
