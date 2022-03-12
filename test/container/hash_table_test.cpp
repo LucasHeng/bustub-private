@@ -221,12 +221,12 @@ TEST(HashTableTest, SampleTest2) {
 
   // delete some values
   for (int i = 0; i < 200000; i++) {
-    LOG_DEBUG("i: %d\n", i);
+    // LOG_DEBUG("i: %d\n", i);
     std::vector<int> res;
     ht.GetValue(nullptr, i, &res);
     if (!res.empty()) {
-      if (i == 197172){
-        LOG_DEBUG("%ld\t%d",res.size(),res[0]);
+      if (i == 197172) {
+        LOG_DEBUG("%ld\t%d", res.size(), res[0]);
       }
       EXPECT_TRUE(ht.Remove(nullptr, i, i));
     }
