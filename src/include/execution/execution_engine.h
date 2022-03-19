@@ -63,7 +63,9 @@ class ExecutionEngine {
         if (result_set != nullptr) {
           result_set->push_back(tuple);
         }
+        // LOG_DEBUG("AA");
       }
+      // LOG_DEBUG("XX");
     } catch (Exception &e) {
       // TODO(student): handle exceptions
     }

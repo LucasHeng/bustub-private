@@ -15,6 +15,7 @@
 #include <memory>
 #include <utility>
 
+#include "execution/executor_factory.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/insert_plan.h"
@@ -66,6 +67,10 @@ class InsertExecutor : public AbstractExecutor {
 
   // raw insert
   uint32_t row_idx;
+  uint32_t row_size;
+
+  // select insert
+  std::unique_ptr<AbstractExecutor> child_executor;
 };
 
 }  // namespace bustub

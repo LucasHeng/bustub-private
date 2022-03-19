@@ -35,7 +35,8 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   const AbstractExpression *predicate_ = plan_->GetPredicate();
   while (table_iter != end_) {
     const Tuple tmp = *table_iter;
-    if (predicate_->Evaluate(&tmp, &schema_).GetAs<bool>()) {
+    // caution!!! predicate is nullptr!!!
+    if (predicate_ == nullptr || predicate_->Evaluate(&tmp, &schema_).GetAs<bool>()) {
       // get Rid
       *rid = tmp.GetRid();
 
