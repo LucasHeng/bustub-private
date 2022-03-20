@@ -15,8 +15,8 @@
 #include <memory>
 #include <utility>
 
-#include "execution/executor_factory.h"
 #include "execution/executor_context.h"
+#include "execution/executor_factory.h"
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/insert_plan.h"
 #include "storage/table/tuple.h"
@@ -63,14 +63,14 @@ class InsertExecutor : public AbstractExecutor {
   const InsertPlanNode *plan_;
   /** new element added by hs*/
   TableInfo *target_table_;
-  std::vector<IndexInfo *> table_indexes;
+  std::vector<IndexInfo *> table_indexes_;
 
   // raw insert
-  uint32_t row_idx;
-  uint32_t row_size;
+  uint32_t row_idx_;
+  uint32_t row_size_;
 
   // select insert
-  std::unique_ptr<AbstractExecutor> child_executor;
+  std::unique_ptr<AbstractExecutor> child_executor_;
 };
 
 }  // namespace bustub

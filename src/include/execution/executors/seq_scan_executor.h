@@ -54,7 +54,7 @@ class SeqScanExecutor : public AbstractExecutor {
   /** new added member by hs **/
   Schema schema_;
   //
-  TableIterator table_iter;
+  TableIterator table_iter_;
   //
   TableIterator end_;
 };

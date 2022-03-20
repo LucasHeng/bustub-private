@@ -18,25 +18,25 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
     : AbstractExecutor(exec_ctx),
       plan_(plan),
       schema_(Schema(std::vector<Column>())),
-      table_iter(TableIterator(nullptr, RID(), nullptr)),
+      table_iter_(TableIterator(nullptr, RID(), nullptr)),
       end_(TableIterator(nullptr, RID(), nullptr)) {}
 
 void SeqScanExecutor::Init() {
-  TableInfo *table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->GetTableOid());
+  TableInfo *table_info = exec_ctx_->GetCatalog()->GetTable(plan_->GetTableOid());
   // table schema
-  schema_ = table_info_->schema_;
+  schema_ = table_info->schema_;
   // iterator
-  table_iter = table_info_->table_.get()->Begin(exec_ctx_->GetTransaction());
-  end_ = table_info_->table_.get()->End();
+  table_iter_ = table_info->table_->Begin(exec_ctx_->GetTransaction());
+  end_ = table_info->table_->End();
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   // expression
-  const AbstractExpression *predicate_ = plan_->GetPredicate();
-  while (table_iter != end_) {
-    const Tuple tmp = *table_iter;
+  const AbstractExpression *predicate = plan_->GetPredicate();
+  while (table_iter_ != end_) {
+    const Tuple tmp = *table_iter_;
     // caution!!! predicate is nullptr!!!
-    if (predicate_ == nullptr || predicate_->Evaluate(&tmp, &schema_).GetAs<bool>()) {
+    if (predicate == nullptr || predicate->Evaluate(&tmp, &schema_).GetAs<bool>()) {
       // get Rid
       *rid = tmp.GetRid();
 
@@ -50,11 +50,11 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
       }
 
       // new tuples
-      *tuple = table_iter->KeyFromTuple(schema_, *outschema, col_idxs);
-      table_iter++;
+      *tuple = table_iter_->KeyFromTuple(schema_, *outschema, col_idxs);
+      table_iter_++;
       return true;
     }
-    table_iter++;
+    table_iter_++;
   }
   return false;
 }
