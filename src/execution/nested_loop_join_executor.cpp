@@ -28,29 +28,30 @@ void NestedLoopJoinExecutor::Init() {
   right_executor_->Init();
   // get the first left tuple
   RID rid;
-  left_executor_->Next(&l_tuple, &rid);
+  left_executor_->Next(&l_tuple_, &rid);
 }
 
 bool NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) {
   Tuple r_tuple;
   while (true) {
     if (!right_executor_->Next(&r_tuple, rid)) {
-      if (!left_executor_->Next(&l_tuple, rid)) {
+      if (!left_executor_->Next(&l_tuple_, rid)) {
         return false;
-      } else {
-        right_executor_->Init();
-        right_executor_->Next(&r_tuple, rid);
       }
+      right_executor_->Init();
+      right_executor_->Next(&r_tuple, rid);
     }
+    // predicate
     if (plan_->Predicate()
-            ->EvaluateJoin(&l_tuple, left_executor_->GetOutputSchema(), &r_tuple, right_executor_->GetOutputSchema())
+            ->EvaluateJoin(&l_tuple_, left_executor_->GetOutputSchema(), &r_tuple, right_executor_->GetOutputSchema())
             .GetAs<bool>()) {
-      // form new schema ans new tuple
+      // projection
+      // form new schema and new tuple
       std::vector<Column> columns;
       std::vector<Value> values;
       for (uint32_t i = 0; i < left_executor_->GetOutputSchema()->GetColumnCount(); i++) {
         columns.emplace_back(left_executor_->GetOutputSchema()->GetColumn(i));
-        values.emplace_back(l_tuple.GetValue(left_executor_->GetOutputSchema(), i));
+        values.emplace_back(l_tuple_.GetValue(left_executor_->GetOutputSchema(), i));
       }
       for (uint32_t i = 0; i < right_executor_->GetOutputSchema()->GetColumnCount(); i++) {
         columns.emplace_back(right_executor_->GetOutputSchema()->GetColumn(i));

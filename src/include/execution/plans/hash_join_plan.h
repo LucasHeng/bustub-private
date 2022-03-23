@@ -65,4 +65,30 @@ class HashJoinPlanNode : public AbstractPlanNode {
   const AbstractExpression *right_key_expression_;
 };
 
+struct JoinKey {
+  /** the value to join */
+  Value value_;
+
+  /** Compares two join keys for equality.
+   * @param other The other join key to be compared with
+   * @return true if the both keys are equal
+   */
+  bool operator==(const JoinKey &other) const {
+    return value_.CompareEquals(other.value_) == CmpBool::CmpTrue;
+  }
+};
+
+
 }  // namespace bustub
+
+namespace std { 
+
+/** inplements std::hash on JoinKey */
+template <>
+struct hash<bustub::JoinKey> {
+  std::size_t operator()(const bustub::JoinKey &join_key) const {
+    return bustub::HashUtil::HashValue(&join_key.value_);
+  }
+};
+
+} // namespace std

@@ -58,7 +58,7 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
   /** the elements added by hs*/
   std::unique_ptr<AbstractExecutor> left_executor_;
   std::unique_ptr<AbstractExecutor> right_executor_;
-  Tuple l_tuple;
+  Tuple l_tuple_;
 };
 
 }  // namespace bustub
