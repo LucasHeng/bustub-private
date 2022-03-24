@@ -15,6 +15,7 @@
 #include <iostream>
 #include <string>
 
+#include "common/logger.h"
 #include "type/integer_type.h"
 
 namespace bustub {

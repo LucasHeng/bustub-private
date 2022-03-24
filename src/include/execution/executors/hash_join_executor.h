@@ -13,12 +13,14 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
-#include "execution/expressions/abstract_expression.h"
 #include "common/util/hash_util.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/expressions/abstract_expression.h"
 #include "execution/plans/hash_join_plan.h"
 #include "storage/table/tuple.h"
 
@@ -31,11 +33,13 @@ namespace bustub {
 // class JoinHashTable {
 //  public:
 //   /** insert new element*/
-//   void insert(const Value &key, const Tuple &joinValue) {
+//   void insert(const Value &key, const Tuple &joinValue)
+//   {
 //     ht_[key].emplace_back(joinValue);
 //   }
 //   /** @return Iterator to the target element of the hash table*/
-//   std::unordered_map<Value, std::vector<Tuple>>::const_iterator get(const Value &key) const {
+//   std::unordered_map<Value, std::vector<Tuple>>::const_iterator get(const Value &key) const
+//   {
 //     return ht_[key].cbegin();
 //   }
 //   /** @return Iterator to the start of the hash table*/
@@ -43,8 +47,9 @@ namespace bustub {
 //   /** @return Iterator to the end of the hash table*/
 //   std::unordered_map<Value, std::vector<Tuple>>::const_iterator End() { return ht_.cend(); };
 //   /** @return Iterator to the start of the hash table value*/
-//   std::vector<Tuple>::const_iterator valuesBegin(std::unordered_map<Value, std::vector<Tuple>>::const_iterator iter) {
-//     return iter->second.cbegin();  
+//   std::vector<Tuple>::const_iterator valuesBegin(std::unordered_map<Value, std::vector<Tuple>>::const_iterator iter)
+//   {
+//     return iter->second.cbegin();
 //   }
 //   /** @return Iterator to the end of the hash table value*/
 //   std::vector<Tuple>::const_iterator valuesEnd(std::unordered_map<Value, std::vector<Tuple>>::const_iterator iter) {
@@ -91,7 +96,8 @@ class HashJoinExecutor : public AbstractExecutor {
   /** new element added by hs*/
   std::unordered_map<JoinKey, std::vector<Tuple>> join_map_;
   // the iter of the values
-  std::vector<Tuple>::iterator values_;
+  std::vector<Tuple> values_;
+  std::vector<Tuple>::iterator viter_;
   // child
   std::unique_ptr<AbstractExecutor> left_child_;
   std::unique_ptr<AbstractExecutor> right_child_;

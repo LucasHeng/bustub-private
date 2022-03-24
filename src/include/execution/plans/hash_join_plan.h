@@ -73,15 +73,12 @@ struct JoinKey {
    * @param other The other join key to be compared with
    * @return true if the both keys are equal
    */
-  bool operator==(const JoinKey &other) const {
-    return value_.CompareEquals(other.value_) == CmpBool::CmpTrue;
-  }
+  bool operator==(const JoinKey &other) const { return value_.CompareEquals(other.value_) == CmpBool::CmpTrue; }
 };
-
 
 }  // namespace bustub
 
-namespace std { 
+namespace std {
 
 /** inplements std::hash on JoinKey */
 template <>
@@ -91,4 +88,4 @@ struct hash<bustub::JoinKey> {
   }
 };
 
-} // namespace std
+}  // namespace std
