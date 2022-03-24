@@ -48,12 +48,14 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     // raw insert
     // table insert,first construct the tuple
     if (row_idx_ >= row_size_) {
+      throw Exception(ExceptionType::UNKNOWN_TYPE, "no tuple to insert!!!");
       return false;
     }
     std::vector<Value> value(plan_->RawValuesAt(row_idx_++));
     tmp_tuple = Tuple(value, &(target_table_->schema_));
   } else {
     if (!child_executor_->Next(&tmp_tuple, rid)) {
+      throw Exception(ExceptionType::UNKNOWN_TYPE, "no tuple in child executor to insert!!!");
       return false;
     }
   }

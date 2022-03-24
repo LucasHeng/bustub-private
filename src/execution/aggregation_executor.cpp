@@ -37,7 +37,7 @@ void AggregationExecutor::Init() {
 }
 
 bool AggregationExecutor::Next(Tuple *tuple, RID *rid) {
-  LOG_DEBUG("here..");
+  // LOG_DEBUG("here..");
   while (mp_begin_ != agg_map_.End()) {
     if (plan_->GetHaving() == nullptr ||
         plan_->GetHaving()->EvaluateAggregate(mp_begin_.Key().group_bys_, mp_begin_.Val().aggregates_).GetAs<bool>()) {
@@ -48,9 +48,8 @@ bool AggregationExecutor::Next(Tuple *tuple, RID *rid) {
       *tuple = Tuple(values, GetOutputSchema());
       ++mp_begin_;
       return true;
-    } else {
-      ++mp_begin_;
     }
+    ++mp_begin_;
   }
   return false;
 }
