@@ -224,7 +224,7 @@ class Transaction {
 
   /** @return true if rid is shared locked by this transaction */
   bool IsSharedLocked(const RID &rid) { return shared_lock_set_->find(rid) != shared_lock_set_->end(); }
-
+    
   /** @return true if rid is exclusively locked by this transaction */
   bool IsExclusiveLocked(const RID &rid) { return exclusive_lock_set_->find(rid) != exclusive_lock_set_->end(); }
 

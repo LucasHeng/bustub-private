@@ -104,11 +104,23 @@ class LockManager {
    */
   bool Unlock(Transaction *txn, const RID &rid);
 
+  /**
+   * @brief check the whether the transaction is granted a lock on the RID.
+   * 
+   * @param mode ,the check lock mode,shared or exclusive
+   * @return true ,if should be granted
+   * @return false ,if should not be granted
+   */
+  bool Check(LockMode mode, const RID &rid, txn_id_t *tid);
+
  private:
   std::mutex latch_;
 
   /** Lock table for lock requests. */
   std::unordered_map<RID, LockRequestQueue> lock_table_;
+
+  /** transaction_manager */
+  TransactionManager *transaction_manager_ __attribute__((__unused__));
 };
 
 }  // namespace bustub

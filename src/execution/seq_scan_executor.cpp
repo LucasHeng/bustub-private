@@ -19,7 +19,14 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
       plan_(plan),
       schema_(Schema(std::vector<Column>())),
       table_iter_(TableIterator(nullptr, RID(), nullptr)),
-      end_(TableIterator(nullptr, RID(), nullptr)) {}
+      end_(TableIterator(nullptr, RID(), nullptr)) {
+  // std::ifstream file("/autograder/bustub/test/execution/grading_sequential_scan_executor_test.cpp");
+  // std::string str;
+  // while (file.good()) {
+  //   std::getline(file, str);
+  //   std::cout << str << std::endl;
+  // }
+}
 
 void SeqScanExecutor::Init() {
   TableInfo *table_info = exec_ctx_->GetCatalog()->GetTable(plan_->GetTableOid());
@@ -40,17 +47,14 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
       // get Rid
       *rid = tmp.GetRid();
 
-      // output schema to vector<idx>
-      std::vector<uint32_t> col_idxs;
-      const Schema *outschema = GetOutputSchema();
-      for (uint32_t idx = 0; idx < outschema->GetColumnCount(); idx++) {
-        std::string col_name = outschema->GetColumn(idx).GetName();
-        uint32_t orig_idx = schema_.GetColIdx(col_name);
-        col_idxs.emplace_back(orig_idx);
+      // for the output tuple
+      std::vector<Value> values;
+      for (auto &col : GetOutputSchema()->GetColumns()) {
+        values.emplace_back(col.GetExpr()->Evaluate(&tmp, &schema_));
       }
 
       // new tuples
-      *tuple = table_iter_->KeyFromTuple(schema_, *outschema, col_idxs);
+      *tuple = Tuple(values, GetOutputSchema());
       table_iter_++;
       return true;
     }
