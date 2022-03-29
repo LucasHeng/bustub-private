@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "execution/executors/seq_scan_executor.h"
+#include "concurrency/transaction_manager.h"
 
 namespace bustub {
 
@@ -38,10 +39,29 @@ void SeqScanExecutor::Init() {
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *txn = exec_ctx_->GetTransaction();
+
   // expression
   const AbstractExpression *predicate = plan_->GetPredicate();
   while (table_iter_ != end_) {
+    // lock
+    if (!lock_manager->LockShared(txn, table_iter_->GetRid())) {
+      // throw TransactionAbortException(exec_ctx_->GetTransaction()->GetTransactionId(),
+      // AbortReason::LOCK_ON_SHRINKING);
+      return false;
+    }
     const Tuple tmp = *table_iter_;
+    table_iter_++;
+    // unlock for read commit
+    if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
+      if (!lock_manager->Unlock(txn, tmp.GetRid())) {
+        // throw TransactionAbortException(exec_ctx_->GetTransaction()->GetTransactionId(),
+        // AbortReason::UNLOCK_ON_SHRINKING);
+        return false;
+      }
+    }
+
     // caution!!! predicate is nullptr!!!
     if (predicate == nullptr || predicate->Evaluate(&tmp, &schema_).GetAs<bool>()) {
       // get Rid
@@ -55,11 +75,27 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
 
       // new tuples
       *tuple = Tuple(values, GetOutputSchema());
-      table_iter_++;
+      // if (exec_ctx_->GetTransaction()->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
+      //   if (!exec_ctx_->GetLockManager()->Unlock(exec_ctx_->GetTransaction(),table_iter_->GetRid())) {
+      //     exec_ctx_->GetTransactionManager()->Abort(exec_ctx_->GetTransaction());
+      //     // throw TransactionAbortException(exec_ctx_->GetTransaction()->GetTransactionId(),
+      //     // AbortReason::UNLOCK_ON_SHRINKING);
+      //     return false;
+      //   }
+      // }
       return true;
     }
-    table_iter_++;
+    // if (exec_ctx_->GetTransaction()->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
+    //   if (!exec_ctx_->GetLockManager()->Unlock(exec_ctx_->GetTransaction(),table_iter_->GetRid())) {
+    //     exec_ctx_->GetTransactionManager()->Abort(exec_ctx_->GetTransaction());
+    //     // throw TransactionAbortException(exec_ctx_->GetTransaction()->GetTransactionId(),
+    //     // AbortReason::UNLOCK_ON_SHRINKING);
+    //     return false;
+    //   }
+    // }
   }
+  // // final success
+  // txn_mgr->Commit(txn);
   return false;
 }
 

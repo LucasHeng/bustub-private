@@ -106,7 +106,6 @@ class LockManager {
 
   /**
    * @brief check the whether the transaction is granted a lock on the RID.
-   * 
    * @param mode ,the check lock mode,shared or exclusive
    * @return true ,if should be granted
    * @return false ,if should not be granted

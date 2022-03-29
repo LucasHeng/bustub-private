@@ -43,24 +43,40 @@ void InsertExecutor::Init() {
 }
 
 bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  // TransactionManager *txn_mgr = exec_ctx_->GetTransactionManager();
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *txn = exec_ctx_->GetTransaction();
+
   Tuple tmp_tuple;
   if (plan_->IsRawInsert()) {
     // raw insert
     // table insert,first construct the tuple
     if (row_idx_ >= row_size_) {
-      throw Exception(ExceptionType::UNKNOWN_TYPE, "no tuple to insert!!!");
+      // txn_mgr->Commit(txn);
+      // throw Exception(ExceptionType::UNKNOWN_TYPE, "no tuple to insert!!!");
       return false;
     }
     std::vector<Value> value(plan_->RawValuesAt(row_idx_++));
     tmp_tuple = Tuple(value, &(target_table_->schema_));
   } else {
     if (!child_executor_->Next(&tmp_tuple, rid)) {
-      throw Exception(ExceptionType::UNKNOWN_TYPE, "no tuple in child executor to insert!!!");
+      // txn_mgr->Commit(txn);
+      // throw Exception(ExceptionType::UNKNOWN_TYPE, "no tuple in child executor to insert!!!");
       return false;
     }
   }
   // then insert into table heap
   assert(target_table_->table_.get()->InsertTuple(tmp_tuple, rid, exec_ctx_->GetTransaction()));
+
+  // add exclusive lock
+  // Acquire an exclusive lock, upgrading from a shared lock if necessary.
+  if (txn->IsSharedLocked(*rid)) {
+    if (!lock_manager->LockUpgrade(txn, *rid)) {
+      return false;
+    }
+  } else if (!txn->IsExclusiveLocked(*rid) && !lock_manager->LockExclusive(txn, *rid)) {
+    return false;
+  }
 
   // table indexes insert,first loop all indexes
   for (auto &indexinfo : table_indexes_) {

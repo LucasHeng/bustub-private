@@ -29,11 +29,24 @@ void UpdateExecutor::Init() {
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  LockManager *lock_manager = exec_ctx_->GetLockManager();
+  Transaction *txn = exec_ctx_->GetTransaction();
+
   // first,get the tuple from child executor
   Tuple old_tuple;
   if (!child_executor_->Next(&old_tuple, rid)) {
     throw Exception(ExceptionType::UNKNOWN_TYPE, "child executor error");
   }
+
+  // Acquire an exclusive lock, upgrading from a shared lock if necessary.
+  if (txn->IsSharedLocked(*rid)) {
+    if (!lock_manager->LockUpgrade(txn, *rid)) {
+      return false;
+    }
+  } else if (!txn->IsExclusiveLocked(*rid) && !lock_manager->LockExclusive(txn, *rid)) {
+    return false;
+  }
+
   // then,get the new tuple by generateupdatetuple
   Tuple new_tuple = GenerateUpdatedTuple(old_tuple);
   // update the tabale heap,new tuple,old rid,txn
