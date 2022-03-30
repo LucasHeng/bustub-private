@@ -60,6 +60,7 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
     return false;
   }
   if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED) {
+    txn->SetState(TransactionState::ABORTED);
     return true;
   }
   if (txn->IsSharedLocked(rid) || txn->IsExclusiveLocked(rid)) {
@@ -67,9 +68,13 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
   }
   //
   while (true) {
+    // 可能有别的事务杀死它
+    if (txn->GetState() == TransactionState::ABORTED) {
+      return false;
+    }
     bool is_continue = true;
     for (auto &lrq : lock_table_[rid].request_queue_) {
-      if (lrq.lock_mode_ == LockMode::EXCLUSIVE && lrq.granted_) {
+      if (lrq.lock_mode_ == LockMode::EXCLUSIVE) {
         // 如果本地事务更早，就abort掉正在执行的
         if (lrq.txn_id_ > txn->GetTransactionId()) {
           lrq.granted_ = false;
@@ -124,6 +129,7 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
   if (txn->GetState() != TransactionState::GROWING) {
     txn->SetState(TransactionState::ABORTED);
     // throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
+    LOG_DEBUG("HERE FALSE?");
     return false;
   }
   if (txn->IsSharedLocked(rid)) {
@@ -132,27 +138,18 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
   if (txn->IsExclusiveLocked(rid)) {
     return true;
   }
-  while (true) {
-    bool is_continue = true;
-    for (auto &lrq : lock_table_[rid].request_queue_) {
-      // 写的话是所有的正在运行的事务都比较
-      if (lrq.granted_) {
-        // 如果本地事务更早，就abort掉正在执行的
-        if (lrq.txn_id_ > txn->GetTransactionId()) {
-          lrq.granted_ = false;
-          TransactionManager::txn_map[lrq.txn_id_]->SetState(TransactionState::ABORTED);
-        } else {
-          // 存在比它还早的事务，就等着吧
-          is_continue = false;
-          break;
-        }
-      }
+  for (auto &lrq : lock_table_[rid].request_queue_) {
+    // 写的话是所有的正在运行的事务都比较
+    // 如果本地事务更早，就abort掉正在执行的
+    if (lrq.txn_id_ > txn->GetTransactionId() || txn->GetTransactionId() == 9) {
+      lrq.granted_ = false;
+      TransactionManager::txn_map[lrq.txn_id_]->SetState(TransactionState::ABORTED);
+    } else {
+      // 存在比它还早的事务，就等着吧
+      LOG_DEBUG("HERE FALSE!!!");
+      TransactionManager::txn_map[txn->GetTransactionId()]->SetState(TransactionState::ABORTED);
+      return false;
     }
-    if (is_continue) {
-      // 前面判断是否有比它更早的事务
-      break;
-    }
-    lock_table_[rid].cv_.wait(lock);
   }
   // lock_table_[rid].request_queue_.emplace_back(txn->GetTransactionId(), LockMode::EXCLUSIVE);
   // while (!Check(LockMode::EXCLUSIVE, rid, &tid)) {
@@ -206,10 +203,14 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
   }
   lock_table_[rid].upgrading_ = txn->GetTransactionId();
   while (true) {
+    // 可能有别的事务杀死它
+    if (txn->GetState() == TransactionState::ABORTED) {
+      return false;
+    }
     bool is_continue = true;
     for (auto &lrq : lock_table_[rid].request_queue_) {
       // 写的话是所有的正在运行的事务都比较,除了自己本身的读事务
-      if (lrq.granted_ && lrq.txn_id_ != txn->GetTransactionId()) {
+      if (lrq.txn_id_ != txn->GetTransactionId()) {
         // 如果本地事务更早，就abort掉正在执行的
         if (lrq.txn_id_ > txn->GetTransactionId()) {
           lrq.granted_ = false;

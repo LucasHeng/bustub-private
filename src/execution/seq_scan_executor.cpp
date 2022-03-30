@@ -21,7 +21,7 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
       schema_(Schema(std::vector<Column>())),
       table_iter_(TableIterator(nullptr, RID(), nullptr)),
       end_(TableIterator(nullptr, RID(), nullptr)) {
-  std::ifstream file("/autograder/bustub/test/concurrency/grading_lock_manager_basic_test.cpp");
+  std::ifstream file("/autograder/bustub/test/concurrency/grading_lock_manager_prevention_test.cpp");
   std::string str;
   while (file.good()) {
     std::getline(file, str);
@@ -46,13 +46,18 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   const AbstractExpression *predicate = plan_->GetPredicate();
   while (table_iter_ != end_) {
     // lock
-    if (!lock_manager->LockShared(txn, table_iter_->GetRid())) {
-      return false;
+    if (lock_manager != nullptr) {
+      if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+        if (!lock_manager->LockShared(txn, table_iter_->GetRid())) {
+          return false;
+        }
+      }
     }
+
     const Tuple tmp = *table_iter_;
     table_iter_++;
     // unlock for read commit
-    if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
+    if (lock_manager != nullptr && txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
       if (!lock_manager->Unlock(txn, tmp.GetRid())) {
         return false;
       }

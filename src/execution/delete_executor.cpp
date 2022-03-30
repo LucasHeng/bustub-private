@@ -41,12 +41,14 @@ bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   }
 
   // Acquire an exclusive lock, upgrading from a shared lock if necessary.
-  if (txn->IsSharedLocked(*rid)) {
-    if (!lock_manager->LockUpgrade(txn, *rid)) {
+  if (lock_manager != nullptr) {
+    if (txn->IsSharedLocked(*rid)) {
+      if (!lock_manager->LockUpgrade(txn, *rid)) {
+        return false;
+      }
+    } else if (!txn->IsExclusiveLocked(*rid) && !lock_manager->LockExclusive(txn, *rid)) {
       return false;
     }
-  } else if (!txn->IsExclusiveLocked(*rid) && !lock_manager->LockExclusive(txn, *rid)) {
-    return false;
   }
 
   // delete it from table

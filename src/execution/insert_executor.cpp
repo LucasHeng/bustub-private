@@ -70,12 +70,14 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
 
   // add exclusive lock
   // Acquire an exclusive lock, upgrading from a shared lock if necessary.
-  if (txn->IsSharedLocked(*rid)) {
-    if (!lock_manager->LockUpgrade(txn, *rid)) {
+  if (lock_manager != nullptr) {
+    if (txn->IsSharedLocked(*rid)) {
+      if (!lock_manager->LockUpgrade(txn, *rid)) {
+        return false;
+      }
+    } else if (!txn->IsExclusiveLocked(*rid) && !lock_manager->LockExclusive(txn, *rid)) {
       return false;
     }
-  } else if (!txn->IsExclusiveLocked(*rid) && !lock_manager->LockExclusive(txn, *rid)) {
-    return false;
   }
 
   // table indexes insert,first loop all indexes
