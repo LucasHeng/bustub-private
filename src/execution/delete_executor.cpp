@@ -61,6 +61,8 @@ bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     const std::vector<uint32_t> &key_attrs = indexinfo->index_->GetKeyAttrs();
     Tuple key_tuple = del_tuple.KeyFromTuple(table_info_->schema_, indexinfo->key_schema_, key_attrs);
     indexinfo->index_->DeleteEntry(key_tuple, *rid, exec_ctx_->GetTransaction());
+    txn->GetIndexWriteSet()->emplace_back(*rid, table_info_->oid_, WType::DELETE, key_tuple, indexinfo->index_oid_,
+                                          exec_ctx_->GetCatalog());
   }
   return true;
 }

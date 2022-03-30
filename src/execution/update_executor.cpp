@@ -74,6 +74,9 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
       Tuple new_key = new_tuple.KeyFromTuple(table_info_->schema_, indexinfo->key_schema_, key_attrs);
       indexinfo->index_->DeleteEntry(old_key, *rid, exec_ctx_->GetTransaction());
       indexinfo->index_->InsertEntry(new_key, *rid, exec_ctx_->GetTransaction());
+      txn->GetIndexWriteSet()->emplace_back(*rid, table_info_->oid_, WType::DELETE, new_key, indexinfo->index_oid_,
+                                            exec_ctx_->GetCatalog());
+      txn->GetIndexWriteSet()->back().old_tuple_ = old_tuple;
     }
   }
   return true;

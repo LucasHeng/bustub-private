@@ -87,6 +87,8 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     Tuple key = tmp_tuple.KeyFromTuple(target_table_->schema_, *index->GetKeySchema(), index->GetKeyAttrs());
     // insert tuple key
     index->InsertEntry(key, *rid, exec_ctx_->GetTransaction());
+    txn->GetIndexWriteSet()->emplace_back(*rid, target_table_->oid_, WType::INSERT, key, indexinfo->index_oid_,
+                                          exec_ctx_->GetCatalog());
   }
   return true;
 }
