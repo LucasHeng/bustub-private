@@ -129,7 +129,6 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
   if (txn->GetState() != TransactionState::GROWING) {
     txn->SetState(TransactionState::ABORTED);
     // throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
-    LOG_DEBUG("HERE FALSE?");
     return false;
   }
   if (txn->IsSharedLocked(rid)) {
@@ -146,7 +145,6 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
       TransactionManager::txn_map[lrq.txn_id_]->SetState(TransactionState::ABORTED);
     } else {
       // 存在比它还早的事务，就等着吧
-      LOG_DEBUG("HERE FALSE!!!");
       TransactionManager::txn_map[txn->GetTransactionId()]->SetState(TransactionState::ABORTED);
       return false;
     }

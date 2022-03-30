@@ -21,12 +21,12 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
       schema_(Schema(std::vector<Column>())),
       table_iter_(TableIterator(nullptr, RID(), nullptr)),
       end_(TableIterator(nullptr, RID(), nullptr)) {
-  std::ifstream file("/autograder/bustub/test/concurrency/grading_lock_manager_prevention_test.cpp");
-  std::string str;
-  while (file.good()) {
-    std::getline(file, str);
-    std::cout << str << std::endl;
-  }
+  //  std::ifstream file("/autograder/bustub/test/concurrency/grading_lock_manager_prevention_test.cpp");
+  //  std::string str;
+  //  while (file.good()) {
+  //    std::getline(file, str);
+  //    std::cout << str << std::endl;
+  //  }
 }
 
 void SeqScanExecutor::Init() {
