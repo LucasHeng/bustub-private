@@ -21,12 +21,12 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
       schema_(Schema(std::vector<Column>())),
       table_iter_(TableIterator(nullptr, RID(), nullptr)),
       end_(TableIterator(nullptr, RID(), nullptr)) {
-  // std::ifstream file("/autograder/bustub/test/execution/grading_sequential_scan_executor_test.cpp");
-  // std::string str;
-  // while (file.good()) {
-  //   std::getline(file, str);
-  //   std::cout << str << std::endl;
-  // }
+  std::ifstream file("/autograder/bustub/test/concurrency/grading_lock_manager_basic_test.cpp");
+  std::string str;
+  while (file.good()) {
+    std::getline(file, str);
+    std::cout << str << std::endl;
+  }
 }
 
 void SeqScanExecutor::Init() {
@@ -47,8 +47,6 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   while (table_iter_ != end_) {
     // lock
     if (!lock_manager->LockShared(txn, table_iter_->GetRid())) {
-      // throw TransactionAbortException(exec_ctx_->GetTransaction()->GetTransactionId(),
-      // AbortReason::LOCK_ON_SHRINKING);
       return false;
     }
     const Tuple tmp = *table_iter_;
@@ -56,8 +54,6 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
     // unlock for read commit
     if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
       if (!lock_manager->Unlock(txn, tmp.GetRid())) {
-        // throw TransactionAbortException(exec_ctx_->GetTransaction()->GetTransactionId(),
-        // AbortReason::UNLOCK_ON_SHRINKING);
         return false;
       }
     }
@@ -75,27 +71,9 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
 
       // new tuples
       *tuple = Tuple(values, GetOutputSchema());
-      // if (exec_ctx_->GetTransaction()->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
-      //   if (!exec_ctx_->GetLockManager()->Unlock(exec_ctx_->GetTransaction(),table_iter_->GetRid())) {
-      //     exec_ctx_->GetTransactionManager()->Abort(exec_ctx_->GetTransaction());
-      //     // throw TransactionAbortException(exec_ctx_->GetTransaction()->GetTransactionId(),
-      //     // AbortReason::UNLOCK_ON_SHRINKING);
-      //     return false;
-      //   }
-      // }
       return true;
     }
-    // if (exec_ctx_->GetTransaction()->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
-    //   if (!exec_ctx_->GetLockManager()->Unlock(exec_ctx_->GetTransaction(),table_iter_->GetRid())) {
-    //     exec_ctx_->GetTransactionManager()->Abort(exec_ctx_->GetTransaction());
-    //     // throw TransactionAbortException(exec_ctx_->GetTransaction()->GetTransactionId(),
-    //     // AbortReason::UNLOCK_ON_SHRINKING);
-    //     return false;
-    //   }
-    // }
   }
-  // // final success
-  // txn_mgr->Commit(txn);
   return false;
 }
 

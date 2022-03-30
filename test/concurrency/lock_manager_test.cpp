@@ -133,12 +133,12 @@ void UpgradeTest() {
   EXPECT_TRUE(res);
   CheckTxnLockSize(&txn, 1, 0);
   CheckGrowing(&txn);
-
+  LOG_DEBUG("here upgrade...");
   res = lock_mgr.LockUpgrade(&txn, rid);
   EXPECT_TRUE(res);
   CheckTxnLockSize(&txn, 0, 1);
   CheckGrowing(&txn);
-
+  LOG_DEBUG("here unlock...");
   res = lock_mgr.Unlock(&txn, rid);
   EXPECT_TRUE(res);
   CheckTxnLockSize(&txn, 0, 0);
