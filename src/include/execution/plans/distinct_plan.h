@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <vector>
+#include "common/util/hash_util.h"
 #include "execution/plans/abstract_plan.h"
 
 namespace bustub {

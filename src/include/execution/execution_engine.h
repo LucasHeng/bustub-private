@@ -67,7 +67,11 @@ class ExecutionEngine {
       }
       // LOG_DEBUG("XX");
     } catch (Exception &e) {
-      // TODO(student): handle exceptions
+      // TODO(student): handle exceptions/
+      if (result_set != nullptr) {
+        result_set->clear();
+      }
+      return false;
     }
 
     return true;

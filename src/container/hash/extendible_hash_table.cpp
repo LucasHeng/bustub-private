@@ -28,12 +28,12 @@ HASH_TABLE_TYPE::ExtendibleHashTable(const std::string &name, BufferPoolManager 
     : buffer_pool_manager_(buffer_pool_manager), comparator_(comparator), hash_fn_(std::move(hash_fn)) {
   //  implement me!
   Page *page = buffer_pool_manager_->NewPage(&directory_page_id_);
-  std::ifstream file("/autograder/bustub/test/container/grading_hash_table_test.cpp");
-  std::string str;
-  while (file.good()) {
-    std::getline(file, str);
-    std::cout << str << std::endl;
-  }
+  // std::ifstream file("/autograder/bustub/test/container/grading_hash_table_test.cpp");
+  // std::string str;
+  // while (file.good()) {
+  //   std::getline(file, str);
+  //   std::cout << str << std::endl;
+  // }
   HashTableDirectoryPage *hash_table_directory_page = reinterpret_cast<HashTableDirectoryPage *>(page->GetData());
   // hash_table_directory_page->PrintDirectory();
   hash_table_directory_page->SetPageId(directory_page_id_);

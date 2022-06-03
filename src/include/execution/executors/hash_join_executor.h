@@ -13,14 +13,80 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
+#include "common/util/hash_util.h"
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/expressions/abstract_expression.h"
 #include "execution/plans/hash_join_plan.h"
 #include "storage/table/tuple.h"
 
 namespace bustub {
+
+struct JoinKey {
+  /** the value to join */
+  Value value_;
+
+  /** Compares two join keys for equality.
+   * @param other The other join key to be compared with
+   * @return true if the both keys are equal
+   */
+  bool operator==(const JoinKey &other) const { return value_.CompareEquals(other.value_) == CmpBool::CmpTrue; }
+};
+
+}  // namespace bustub
+
+namespace std {
+
+/** inplements std::hash on JoinKey */
+template <>
+struct hash<bustub::JoinKey> {
+  std::size_t operator()(const bustub::JoinKey &join_key) const {
+    return bustub::HashUtil::HashValue(&join_key.value_);
+  }
+};
+
+}  // namespace std
+
+namespace bustub {
+
+// /**
+//  * @brief A simplified hash table that has all the necessary functionality for join
+//  * designed by hs
+//  */
+// class JoinHashTable {
+//  public:
+//   /** insert new element*/
+//   void insert(const Value &key, const Tuple &joinValue)
+//   {
+//     ht_[key].emplace_back(joinValue);
+//   }
+//   /** @return Iterator to the target element of the hash table*/
+//   std::unordered_map<Value, std::vector<Tuple>>::const_iterator get(const Value &key) const
+//   {
+//     return ht_[key].cbegin();
+//   }
+//   /** @return Iterator to the start of the hash table*/
+//   std::unordered_map<Value, std::vector<Tuple>>::const_iterator Begin() { return ht_.cbegin(); };
+//   /** @return Iterator to the end of the hash table*/
+//   std::unordered_map<Value, std::vector<Tuple>>::const_iterator End() { return ht_.cend(); };
+//   /** @return Iterator to the start of the hash table value*/
+//   std::vector<Tuple>::const_iterator valuesBegin(std::unordered_map<Value, std::vector<Tuple>>::const_iterator iter)
+//   {
+//     return iter->second.cbegin();
+//   }
+//   /** @return Iterator to the end of the hash table value*/
+//   std::vector<Tuple>::const_iterator valuesEnd(std::unordered_map<Value, std::vector<Tuple>>::const_iterator iter) {
+//     return iter->second.cend();
+//   }
+//  private:
+//   /** the hash table is just a map from join key to a vector of tuple*/
+//   std::unordered_map<Value, std::vector<Tuple>> ht_;
+// };
+/** JoinKey represents a key in an join operation */
 
 /**
  * HashJoinExecutor executes a nested-loop JOIN on two tables.
@@ -54,6 +120,14 @@ class HashJoinExecutor : public AbstractExecutor {
  private:
   /** The NestedLoopJoin plan node to be executed. */
   const HashJoinPlanNode *plan_;
+  /** new element added by hs*/
+  std::unordered_map<JoinKey, std::vector<Tuple>> join_map_;
+  // the iter of the values
+  std::vector<Tuple> values_;
+  std::vector<Tuple>::iterator viter_;
+  // child
+  std::unique_ptr<AbstractExecutor> left_child_;
+  std::unique_ptr<AbstractExecutor> right_child_;
 };
 
 }  // namespace bustub
